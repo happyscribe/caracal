@@ -1,8 +1,6 @@
 require 'open-uri'
 require 'zip'
 
-require 'caracal/header'
-
 require 'caracal/core/bookmarks'
 require 'caracal/core/custom_properties'
 require 'caracal/core/file_name'
@@ -28,7 +26,6 @@ require 'caracal/renderers/core_renderer'
 require 'caracal/renderers/custom_renderer'
 require 'caracal/renderers/document_renderer'
 require 'caracal/renderers/fonts_renderer'
-require 'caracal/renderers/header_renderer'
 require 'caracal/renderers/footer_renderer'
 require 'caracal/renderers/numbering_renderer'
 require 'caracal/renderers/package_relationships_renderer'
@@ -95,9 +92,7 @@ module Caracal
       # File.open(docx.path, 'wb') { |f| f.write(buffer.string) }
     end
 
-    def header
-      @header ||= Header.new
-    end
+
 
     #------------------------------------------------------
     # Public Instance Methods
@@ -134,6 +129,7 @@ module Caracal
       @contents ||= []
     end
 
+
     #============ RENDERING ===============================
 
     # This method renders the word document instance into
@@ -147,15 +143,13 @@ module Caracal
         render_core(zip)
         render_custom(zip)
         render_fonts(zip)
-        render_header(zip)
         render_footer(zip)
         render_settings(zip)
         render_styles(zip)
         render_document(zip)
-        render_relationships(zip)          # Must go here: Depends on document renderer
-        render_header_relationships(zip)   # Must go here: Depends on document renderer
-        render_media(zip)                  # Must go here: Depends on document renderer
-        render_numbering(zip)              # Must go here: Depends on document renderer
+        render_relationships(zip)   # Must go here: Depends on document renderer
+        render_media(zip)           # Must go here: Depends on document renderer
+        render_numbering(zip)       # Must go here: Depends on document renderer
       end
     end
 
@@ -218,13 +212,6 @@ module Caracal
       zip.write(content)
     end
 
-    def render_header(zip)
-      content = ::Caracal::Renderers::HeaderRenderer.render(header)
-
-      zip.put_next_entry('word/header1.xml')
-      zip.write(content)
-    end
-
     def render_footer(zip)
       content = ::Caracal::Renderers::FooterRenderer.render(self)
 
@@ -234,7 +221,6 @@ module Caracal
 
     def render_media(zip)
       images = relationships.select { |r| r.relationship_type == :image }
-      images.concat(header.relationships.select { |r| r.relationship_type == :image })
       images.each do |rel|
         if rel.relationship_data.to_s.size > 0
           content = rel.relationship_data
@@ -266,15 +252,6 @@ module Caracal
 
       zip.put_next_entry('word/_rels/document.xml.rels')
       zip.write(content)
-    end
-
-    def render_header_relationships(zip)
-      if header.relationships.any?
-        content = ::Caracal::Renderers::RelationshipsRenderer.render(header)
-
-        zip.put_next_entry('word/_rels/header1.xml.rels')
-        zip.write(content)
-      end
     end
 
     def render_settings(zip)

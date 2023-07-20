@@ -26,7 +26,6 @@ module Caracal
           def self.default_relationships
             [
               { target: 'fontTable.xml',  type: :font      },
-              { target: 'header1.xml',    type: :header    },
               { target: 'footer1.xml',    type: :footer    },
               { target: 'numbering.xml',  type: :numbering },
               { target: 'settings.xml',   type: :setting   },
@@ -70,7 +69,7 @@ module Caracal
           #============== REGISTRATION ========================
           
           def register_relationship(model)
-            unless (r = find_relationship(model.relationship_target))
+            unless r = find_relationship(model.relationship_target)
               relationships << model
               r = model
             end
@@ -78,7 +77,7 @@ module Caracal
           end
           
           def unregister_relationship(target)
-            if (r = find_relationship(target))
+            if r = find_relationship(target)
               relationships.delete(r)
             end
           end
