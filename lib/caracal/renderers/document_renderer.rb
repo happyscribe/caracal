@@ -31,13 +31,24 @@ module Caracal
               #============= PAGE SETTINGS ==============================
 
               xml['w'].sectPr do
-                if (rel = document.find_relationship('header1.xml'))
+                # To display same footer in all the pages of document
+                if rel = document.find_relationship('footer1.xml')
+                  xml['w'].footerReference({ 'r:id' => rel.formatted_id, 'w:type' => 'default' })
+                end
+                # To display different footer in first the page of document
+                if rel = document.find_relationship('first_page_footer.xml')
+                  xml['w'].footerReference({ 'r:id' => rel.formatted_id, 'w:type' => 'first' })
+                end
+
+                # To display same header in all the pages of document
+                if rel = document.find_relationship('header1.xml')
                   xml['w'].headerReference({ 'r:id' => rel.formatted_id, 'w:type' => 'default' })
                 end
-                if document.page_number_show
-                  if (rel = document.find_relationship('footer1.xml'))
-                    xml['w'].footerReference({ 'r:id' => rel.formatted_id, 'w:type' => 'default' })
-                  end
+
+                # To display different header in first the page of document
+                if rel = document.find_relationship('first_page_header.xml')
+                  xml['w'].headerReference({ 'r:id' => rel.formatted_id, 'w:type' => 'first' })
+                  xml['w'].titlePg true
                 end
                 xml['w'].pgSz page_size_options
                 xml['w'].pgMar page_margin_options
@@ -128,13 +139,13 @@ module Caracal
             index = model.relationship_id           # relationship an id.
 
             r_node  = fragment.at_xpath("//a:blip[@r:embed='#{ id }']", { a: a_href, r: r_href })
-            if (r_attr = r_node.attributes['embed'])
+            if r_attr  = r_node.attributes['embed']
               r_attr.value = "rId#{ index }"
             end
 
             p_parent = r_node.parent.parent
             p_node   = p_parent.children[0].children[0]
-            if (p_attr = p_node.attributes['id'])
+            if p_attr  = p_node.attributes['id']
               p_attr.value = index.to_s
             end
           end
@@ -144,7 +155,7 @@ module Caracal
       end
 
       def render_image(xml, model)
-        unless (ds = document.default_style)
+        unless ds = document.default_style
           raise Caracal::Errors::NoDefaultStyleError 'Document must declare a default paragraph style.'
         end
 
@@ -222,6 +233,20 @@ module Caracal
         end
       end
 
+      def render_field(xml, model)
+        xml['w'].fldChar({ 'w:fldCharType' => 'begin' })
+        xml['w'].r do
+          xml['w'].rPr do
+            render_run_attributes(xml, model, false)
+          end
+          xml['w'].instrText({ 'xml:space' => 'preserve' }) do
+            xml.text model.formatted_type
+          end
+        end
+        xml['w'].fldChar({ 'w:fldCharType' => 'separate' })
+        xml['w'].fldChar({ 'w:fldCharType' => 'end' })
+      end
+
       def render_list(xml, model)
         if model.list_level == 0
           document.toplevel_lists << model
@@ -277,6 +302,7 @@ module Caracal
           xml['w'].pPr do
             xml['w'].pStyle({ 'w:val' => model.paragraph_style })  unless model.paragraph_style.nil?
             xml['w'].contextualSpacing({ 'w:val' => '0' })
+            xml['w'].spacing({ 'w:line' => '240', 'w:lineRule' => 'auto' })
             xml['w'].jc({ 'w:val' => model.paragraph_align })  unless model.paragraph_align.nil?
             render_run_attributes(xml, model, true)
           end
@@ -352,8 +378,15 @@ module Caracal
           end
 
           rowspan_hash = {}
-          model.rows.each do |row|
+          model.rows.each_with_index do |row, index|
             xml['w'].tr do
+              if model.table_repeat_header > 0
+                if index < model.table_repeat_header
+                  xml['w'].trPr do
+                    xml['w'].tblHeader
+                  end
+                end
+              end
               tc_index = 0
               row.each do |tc|
                 xml['w'].tc do

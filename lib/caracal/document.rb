@@ -1,12 +1,12 @@
 require 'open-uri'
 require 'zip'
-
 require 'caracal/header'
-
 require 'caracal/core/bookmarks'
 require 'caracal/core/custom_properties'
 require 'caracal/core/file_name'
 require 'caracal/core/fonts'
+require 'caracal/core/footer'
+require 'caracal/core/first_page_footer'
 require 'caracal/core/iframes'
 require 'caracal/core/ignorables'
 require 'caracal/core/images'
@@ -29,7 +29,9 @@ require 'caracal/renderers/custom_renderer'
 require 'caracal/renderers/document_renderer'
 require 'caracal/renderers/fonts_renderer'
 require 'caracal/renderers/header_renderer'
+require 'caracal/renderers/first_page_header_renderer'
 require 'caracal/renderers/footer_renderer'
+require 'caracal/renderers/first_page_footer_renderer'
 require 'caracal/renderers/numbering_renderer'
 require 'caracal/renderers/package_relationships_renderer'
 require 'caracal/renderers/relationships_renderer'
@@ -66,6 +68,8 @@ module Caracal
     include Caracal::Core::Tables
     include Caracal::Core::Text
 
+    include Caracal::Core::Footer
+    include Caracal::Core::FirstPageFooter
 
     #------------------------------------------------------
     # Public Class Methods
@@ -97,6 +101,10 @@ module Caracal
 
     def header
       @header ||= Header.new
+    end
+
+    def first_page_header
+      @first_page_header ||= Header.new
     end
 
     #------------------------------------------------------
@@ -134,6 +142,19 @@ module Caracal
       @contents ||= []
     end
 
+    def footer_content
+      @footer_content
+    end
+
+     def first_page_footer_content
+       @first_page_footer_content
+     end
+
+    def header_content
+      @header_content
+    end
+
+
     #============ RENDERING ===============================
 
     # This method renders the word document instance into
@@ -148,12 +169,15 @@ module Caracal
         render_custom(zip)
         render_fonts(zip)
         render_header(zip)
+        render_first_page_header(zip)
         render_footer(zip)
+        render_first_page_footer(zip)
         render_settings(zip)
         render_styles(zip)
         render_document(zip)
         render_relationships(zip)          # Must go here: Depends on document renderer
         render_header_relationships(zip)   # Must go here: Depends on document renderer
+        render_first_page_header_relationships(zip)  # Must go here: Depends on document renderer
         render_media(zip)                  # Must go here: Depends on document renderer
         render_numbering(zip)              # Must go here: Depends on document renderer
       end
@@ -225,10 +249,24 @@ module Caracal
       zip.write(content)
     end
 
+    def render_first_page_header(zip)
+      content = ::Caracal::Renderers::FirstPageHeaderRenderer.render(first_page_header)
+
+      zip.put_next_entry('word/first_page_header.xml')
+      zip.write(content)
+    end
+
     def render_footer(zip)
       content = ::Caracal::Renderers::FooterRenderer.render(self)
 
       zip.put_next_entry('word/footer1.xml')
+      zip.write(content)
+    end
+
+    def render_first_page_footer(zip)
+      content = ::Caracal::Renderers::FirstPageFooterRenderer.render(self)
+
+      zip.put_next_entry('word/first_page_footer.xml')
       zip.write(content)
     end
 
@@ -273,6 +311,15 @@ module Caracal
         content = ::Caracal::Renderers::RelationshipsRenderer.render(header)
 
         zip.put_next_entry('word/_rels/header1.xml.rels')
+        zip.write(content)
+      end
+    end
+
+    def render_first_page_header_relationships(zip)
+      if first_page_header.relationships.any?
+        content = ::Caracal::Renderers::RelationshipsRenderer.render(first_page_header)
+
+        zip.put_next_entry('word/_rels/first_page_header.xml.rels')
         zip.write(content)
       end
     end
