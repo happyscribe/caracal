@@ -5,13 +5,13 @@ require 'caracal/renderers/xml_renderer'
 
 module Caracal
   module Renderers
-    class FooterRenderer < DocumentRenderer
+    class FirstPageFooterRenderer < DocumentRenderer
 
       #-------------------------------------------------------------
       # Public Methods
       #-------------------------------------------------------------
 
-      # This method produces the xml required for the `word/footer1.xml`
+      # This method produces the xml required for the `word/first_page_footer.xml`
       # sub-document.
       #
       def to_xml
@@ -56,12 +56,12 @@ module Caracal
                 end
               end
             end
-          elsif document.footer_content.present? && document.footer_content.valid?
+          elsif document.first_page_footer_content.present? && document.first_page_footer_content.valid?
             xml['w'].ftr root_options do
 
               #============= CONTENTS ===================================
 
-              document.footer_content.contents.each do |model|
+              document.first_page_footer_content.contents.each do |model|
                 method = render_method_for_model(model)
                 send(method, xml, model)
               end
